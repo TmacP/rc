@@ -32,8 +32,6 @@ alias gp='git pull && git push'
 
 export PATH="/usr/local/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
  
-export PATH=$HOME/lilypond/bin:$PATH
-export ASPELL_CONF="dict-dir ~/.aspell/; master en_CA"
 
 # nvm
 export NVM_DIR="$HOME/.nvm"
@@ -122,13 +120,6 @@ function pp() {
   pygmentize -l "$lang" -O style=zenburn "$file" | less -R
 }
 
-alias pdf='for f in *.ts; do ts2pdf "$f"; done'
 export PATH="$HOME/.local/bin:$PATH"
 
-alias ds='$HOME/llama.cpp/build/bin/llama-cli -i --chat-template deepseek --color --multiline-input -m $HOME/models/deepseek-coder/deepseek-coder-6.7b-instruct.Q4_K_M.gguf --system-prompt "You are a helpful assistant."'
-
-
-alias spanish='~/llama.cpp/build/bin/llama-cli   -i   --chat-template llama2   --color    --system-prompt "Eres un asistente útil que siempre responde solo en español, sin importar el idioma del usuario. Tu tarea es ayudarme a aprender español con explicaciones claras y correcciones amables."   -m ~/models/tinyllama/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf   --temp 0.9   --n-predict 256'
-source "$HOME/emsdk/emsdk_env.sh"
-eval "$(gh copilot alias -- bash)"
 export PATH=~/local/llvm/bin:$PATH
