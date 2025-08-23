@@ -4,9 +4,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(custom-enabled-themes '(zenburn))
+ '(custom-enabled-themes '(tlm))
  '(custom-safe-themes
-   '("f87c86fa3d38be32dc557ba3d4cedaaea7bc3d97ce816c0e518dfe9633250e34"
+   '("26b3cce73c2507647c2e4d1ad8f808ed8cc8e1f64643b13769f7fa343501f438"
      default))
  '(desktop-save-mode t)
  '(save-place-mode t)
@@ -19,13 +19,13 @@
  '(default ((t (:family "Arial" :foundry "outline" :slant normal :weight regular :height 120 :width normal)))))
 
 
-
+(setq visible-bell t)
+(global-hl-line-mode t)
 
 ;;; -*- lexical-binding: t -*-
 
-(custom-set-variables
- '(custom-enabled-themes '(zenburn)))
-(custom-set-faces)
+
+
 
 ;; ------------------------------
 ;; Minimal UI
@@ -91,60 +91,58 @@
 (add-hook 'emacs-startup-hook
           (lambda () (message "Emacs ready in %s" (emacs-init-time))))
 
-;;
-;; Build build.bat
-;;
-;; ---------- Build: persistent CMD with MSVC env ----------
-(require 'comint)
 
-(defvar my/build-shell-buffer "*Build*")
-(defvar my/build-shell-initialized nil)
+;;
+;; BUILD two
+;;
+;;; --- Import MSVC env once into Emacs ---
 
-(defconst my/project-dir "C:/Users/trm00/Documents/handmaiden/code")
+(defvar my/msvc-env-imported nil)
+
 (defconst my/vcvars
   "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvars64.bat")
 
-(defun my/run-build ()
-  "Run build.bat in a persistent cmd shell with MSVC env set once.
-Shows *Build* if it didn't exist; otherwise stays in the current code buffer.
-Always clears old output before starting."
+(defun my/msvc-import-env ()
+  "Call vcvars64.bat and copy its environment into Emacs (once)."
   (interactive)
-  (let* ((here (current-buffer))
-         (created nil)
-         (buf (get-buffer my/build-shell-buffer)))
+  (unless my/msvc-env-imported
+    (let* ((cmd (format "cmd.exe /c \"call \"%s\" >nul & set\"" my/vcvars))
+           (out (with-temp-buffer
+                  (call-process-shell-command cmd nil (current-buffer))
+                  (buffer-string))))
+      (dolist (line (split-string out "[\r\n]+" t))
+        (when (string-match "\\`\\([^=]+\\)=\\(.*\\)\\'" line)
+          (setenv (match-string 1 line) (match-string 2 line))))
+      ;; Keep exec-path in sync with PATH
+      (setq exec-path
+            (append (split-string (getenv "PATH") path-separator t)
+                    (list exec-directory)))
+      (setq my/msvc-env-imported t)
+      (message "MSVC environment imported."))))
 
-    ;; Create the build shell if missing
-    (unless (and buf (comint-check-proc buf))
-      (setq buf (shell my/build-shell-buffer))
-      (setq created t)
-      (with-current-buffer buf
-        ;; Ensure the shell starts in the project dir
-        (setq default-directory my/project-dir)))
+;;; --- Minibuffer-driven compile that uses the imported env ---
 
-    ;; Send commands
-    (with-current-buffer buf
-      (read-only-mode -1)
-      (let ((proc (get-buffer-process buf)))
-        ;; start fresh output
-        (erase-buffer)
-        ;; Initialize MSVC env once per Emacs session
-        (unless my/build-shell-initialized
-          (comint-send-string proc (format "call \"%s\"\r\n" my/vcvars))
-          (setq my/build-shell-initialized t))
-        ;; Always cd to project before building
-        (comint-send-string proc (format "cd /d \"%s\"\r\n" my/project-dir))
-        ;; Kick the build
-        (comint-send-string proc "build.bat\r\n")))
+(defconst my/project-dir "C:/Users/trm00/Documents/handmaiden/code")
 
-    ;; Show the buffer only the first time; otherwise leave user in place
-    (if created
-        (display-buffer buf)
-      (message "Build started in %s" my/build-shell-buffer))
+(setq compile-command "build.bat")            ;; what C-x p c / M-m will run by default
+(setq compilation-ask-about-save nil)         ;; save without asking
+(setq compilation-scroll-output t)            ;; follow output
 
-    ;; stay in the code buffer if it already existed
-    (switch-to-buffer here)))
+(defun my/compile-here ()
+  "Import MSVC env once, set project dir, then run `compile`."
+  (interactive)
+  (my/msvc-import-env)
+  (let ((default-directory my/project-dir))
+    (compile compile-command)))
 
-(global-set-key (kbd "M-m") #'my/run-build)
+;; Keep focus in your code buffer; put *compilation* at bottom and don’t steal point
+(add-to-list 'display-buffer-alist
+             '("\\*compilation\\*"
+               (display-buffer-reuse-window display-buffer-at-bottom)
+               (window-height . 0.25)))
+
+(global-set-key (kbd "M-m") #'my/compile-here)  ;; your M-m key
+;; or: (global-set-key (kbd "M-m") #'project-compile) if you prefer project.el
 
 
 ;; ------------------------------
@@ -186,3 +184,108 @@ Always clears old output before starting."
 
 ;; Bind Tab to dynamic expansion in C/C++ modes
 (define-key c-mode-base-map (kbd "TAB") 'dabbrev-expand)
+
+
+;;
+;; NEXT ERROR
+;;
+;;; Fix/expand Windows error parsing so clicks & jumps go straight to files
+;; ---------- NEXT ERROR (minimal with /FC) ----------
+;; MSVC prints absolute paths with /FC, so Emacs can open them directly.
+
+;; Make M-n / M-p work from *any* buffer by remembering the newest compilation buf
+(add-hook 'compilation-start-hook
+          (lambda (proc)
+            (setq next-error-last-buffer (process-buffer proc))))
+
+;; Jump through hits
+(global-set-key (kbd "M-n") #'next-error)
+(global-set-key (kbd "M-p") #'previous-error)
+
+;; Optional: control what counts as a “hit”
+;; 0=visit all, 1=skip notes, 2=skip warnings+notes
+(setq compilation-skip-threshold 0)
+
+;; Optional: avoid recentering when jumping
+(setq next-error-recenter 0)
+
+;; Optional: normalize backslashes (harmless with /FC but nice on Windows)
+(setq compilation-parse-errors-filename-function
+      (lambda (f) (and f (subst-char-in-string ?\\ ?/ f))))
+
+;; Ensure built-in MSVC/gnu regexps are active (usually already are)
+(with-eval-after-load 'compile
+  (dolist (sym '(msvc gnu))
+    (add-to-list 'compilation-error-regexp-alist sym)))
+
+
+
+;;
+;; AUTO HIDE BUILD 
+;;
+;;; Show *compilation* at start, hide on success, keep visible on errors
+
+(defvar my/build-start-time nil)
+
+;; Always show the compilation window when a build starts (don’t steal focus)
+(add-hook 'compilation-start-hook
+          (lambda (proc)
+            (setq my/build-start-time (float-time))
+            (setq next-error-last-buffer (process-buffer proc))
+            (display-buffer (process-buffer proc))))
+
+(add-hook 'compilation-finish-functions
+          (lambda (buf msg)
+            ;; timing message
+            (let ((secs (when my/build-start-time
+                          (- (float-time) my/build-start-time))))
+              (when secs
+                (message "Build: %s (%.2fs)" (string-trim msg) secs)))
+            (if (string-match-p "\\`finished" msg)
+                ;; success: briefly show status, then hide the window
+                (run-at-time 0.15 nil
+                             (lambda (b)
+                               (when (buffer-live-p b)
+                                 (when-let ((win (get-buffer-window b)))
+                                   (quit-window nil win))))
+                             buf)
+              ;; failure (nonzero exit): ensure the window is visible and stays
+              (display-buffer buf))))
+
+
+;;
+;; widen narrow
+;;
+
+;; --- Narrow / Widen helpers ---
+;; Allow narrowing without the safety prompt
+(put 'narrow-to-region 'disabled nil)
+
+(defun my/toggle-narrow ()
+  "Smart narrow/widen:
+   - If already narrowed -> widen
+   - If region active    -> narrow to region
+   - Else                -> narrow to defun"
+  (interactive)
+  (cond
+   ((buffer-narrowed-p)
+    (widen) (message "Widened"))
+   ((use-region-p)
+    (narrow-to-region (region-beginning) (region-end))
+    (deactivate-mark)
+    (message "Narrowed to region"))
+   (t
+    (narrow-to-defun)
+    (message "Narrowed to defun"))))
+
+;; Prefix map on C-c n
+(defvar my/narrow-map (make-sparse-keymap) "Keymap for narrowing commands.")
+(define-key my/narrow-map (kbd "t") #'my/toggle-narrow)  ;; C-c n t -> smart toggle
+(define-key my/narrow-map (kbd "n") #'narrow-to-region)  ;; C-c n n
+(define-key my/narrow-map (kbd "d") #'narrow-to-defun)   ;; C-c n d
+(define-key my/narrow-map (kbd "p") #'narrow-to-page)    ;; C-c n p
+(define-key my/narrow-map (kbd "w") #'widen)             ;; C-c n w
+(global-set-key (kbd "C-c n") my/narrow-map)
+
+;; Also bind a single Meta key in programming buffers
+(global-set-key (kbd "M-RET") #'my/toggle-narrow)
