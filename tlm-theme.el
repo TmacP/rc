@@ -5,10 +5,10 @@
 
 (let* (
        ;; === Color Palette ===
-       (purple "#84739C")
-       (font   "#AC9FAC")
-       (peach  "#725050")
-       (dark   "#343030")
+       (purple "#9688AA")
+       (font   "#E5DCE5")
+       (peach  "#B59C9C")
+       (dark   "#3F3B3B")
 
        ;; === Semantic Face Colors ===
        (bg-default dark)
@@ -28,7 +28,7 @@
    'tlm
 
    ;; ---------- Base / UI ----------
-   `(default ((t (:background ,bg-default :foreground ,fg-default :family "Arial" :height 120))))
+   `(default ((t (:background ,bg-default :foreground ,fg-default :family "Liberation Mono" :height 120))))
    `(cursor  ((t (:background ,peach))))
    `(region  ((t (:extend t :background ,bg-region :foreground ,fg-region))))
    `(highlight ((t (:inherit region))))
@@ -105,4 +105,5 @@
    ))
 
 (provide-theme 'tlm)
+
 ;;; tlm-theme.el ends here
