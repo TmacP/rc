@@ -6,18 +6,15 @@
  ;; If there is more than one, they won't work right.
  '(custom-enabled-themes '(tlm))
  '(custom-safe-themes
-   '("26b3cce73c2507647c2e4d1ad8f808ed8cc8e1f64643b13769f7fa343501f438"
+   '("f023dc9a5fd3a4d962b0966782b7cb6c9df630e735867c1e12b0194b02577bb4"
+     "669e6bf21e30796ff1c91b35d523f569093705ba4d77a8719a9690743b72b654"
+     "e95619667a5ae55e999ce4e130e358fa18e96590d266021977b7c223335ad921"
+     "4f97e8aeff5a448c9759a9196ea992bc39dd6f5dc8630ccaa61cc45f904b1cab"
+     "26b3cce73c2507647c2e4d1ad8f808ed8cc8e1f64643b13769f7fa343501f438"
      default))
  '(desktop-save-mode t)
  '(save-place-mode t)
  '(tool-bar-mode nil))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(default ((t (:family "Arial" :foundry "outline" :slant normal :weight regular :height 120 :width normal)))))
-
 
 (setq visible-bell t)
 (global-hl-line-mode t)
@@ -289,3 +286,9 @@
 
 ;; Also bind a single Meta key in programming buffers
 (global-set-key (kbd "M-RET") #'my/toggle-narrow)
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
