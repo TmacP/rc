@@ -5,10 +5,10 @@
 
 (let* (
        ;; === Color Palette ===
-       (purple "#9688AA")
-       (font   "#E5DCE5")
-       (peach  "#B59C9C")
-       (dark   "#3F3B3B")
+       (purple "#84739C")
+       (font   "#AC9FAC")
+       (peach  "#725050")
+       (dark   "#343030")
 
        ;; === Semantic Face Colors ===
        (bg-default dark)
@@ -26,7 +26,6 @@
 
   (custom-theme-set-faces
    'tlm
-
    ;; ---------- Base / UI ----------
    `(default ((t (:background ,bg-default :foreground ,fg-default :family "Liberation Mono" :height 120))))
    `(cursor  ((t (:background ,peach))))
@@ -105,5 +104,4 @@
    ))
 
 (provide-theme 'tlm)
-
 ;;; tlm-theme.el ends here
