@@ -1,4 +1,5 @@
 ;;; -*- lexical-binding: t -*-
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -20,17 +21,47 @@
 (setq visible-bell t)
 (global-hl-line-mode t)
 
-;;; -*- lexical-binding: t -*-
-
-
-
-
 ;; ------------------------------
 ;; Minimal UI
 ;; ------------------------------
 ;;(menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
+
+;; ------------------------------
+;; TRAMP on Windows: sane defaults
+;; ------------------------------
+;; Ensures TRAMP “just works” with Windows' native OpenSSH.
+(when (eq system-type 'windows-nt)
+  ;; Make sure Emacs sees your real HOME so ~/.ssh resolves correctly.
+  (setenv "HOME" (or (getenv "HOME") (getenv "USERPROFILE")))
+  ;; Prefer sshx on Windows, and avoid ControlMaster options.
+  (setq tramp-default-method "sshx"
+        tramp-use-ssh-controlmaster-options nil)
+  ;; If PATH is weird, you can explicitly point TRAMP to ssh.exe:
+  ;; (setq tramp-ssh-program "C:/Windows/System32/OpenSSH/ssh.exe")
+  )
+
+;; Add "-tt" to ssh/sshx login args so Windows OpenSSH allocates a TTY
+;; (helps TRAMP reliably detect prompts). Harmless elsewhere.
+(with-eval-after-load 'tramp
+  (require 'cl-lib)
+  (dolist (method '("ssh" "sshx"))
+    (let* ((entry (assoc method tramp-methods))
+           (args  (alist-get 'tramp-login-args (cdr entry))))
+      (when (and entry args)
+        (cl-pushnew '("-tt") (car args) :test #'equal)))))
+
+;; Quality-of-life for remote work
+(setq tramp-verbose 1)                           ;; quieter logs; raise to 6 if debugging
+(setq remote-file-name-inhibit-cache nil)        ;; speed up repeated ops
+(setq tramp-auto-save-directory
+      (expand-file-name "tramp-autosave" user-emacs-directory))
+(setq tramp-persistency-file-name
+      (expand-file-name "tramp-history.el" user-emacs-directory))
+(setq remote-file-name-inhibit-auto-save t)      ;; don’t drop autosaves on remotes
+(add-to-list 'backup-directory-alist
+             (cons "." (expand-file-name "backups" user-emacs-directory)))
 
 ;; ------------------------------
 ;; Git command helper
@@ -89,12 +120,10 @@
 (add-hook 'emacs-startup-hook
           (lambda () (message "Emacs ready in %s" (emacs-init-time))))
 
-
 ;;
 ;; BUILD two
 ;;
 ;;; --- Import MSVC env once into Emacs ---
-
 (defvar my/msvc-env-imported nil)
 
 (defconst my/vcvars
@@ -119,7 +148,6 @@
       (message "MSVC environment imported."))))
 
 ;;; --- Minibuffer-driven compile that uses the imported env ---
-
 (defconst my/project-dir "C:/Users/trm00/Documents/handmaiden/code")
 
 (setq compile-command "build.bat")            ;; what C-x p c / M-m will run by default
@@ -140,8 +168,6 @@
                (window-height . 0.25)))
 
 (global-set-key (kbd "M-m") #'my/compile-here)  ;; your M-m key
-;; or: (global-set-key (kbd "M-m") #'project-compile) if you prefer project.el
-
 
 ;; ------------------------------
 ;; Handmade Hero style indentation
@@ -179,10 +205,8 @@
 
 (add-hook 'c-mode-common-hook 'casey-big-fun-c-hook)
 
-
 ;; Bind Tab to dynamic expansion in C/C++ modes
 (define-key c-mode-base-map (kbd "TAB") 'dabbrev-expand)
-
 
 ;;
 ;; NEXT ERROR
@@ -216,8 +240,6 @@
   (dolist (sym '(msvc gnu))
     (add-to-list 'compilation-error-regexp-alist sym)))
 
-
-
 ;;
 ;; AUTO HIDE BUILD 
 ;;
@@ -250,11 +272,9 @@
               ;; failure (nonzero exit): ensure the window is visible and stays
               (display-buffer buf))))
 
-
 ;;
 ;; widen narrow
 ;;
-
 ;; --- Narrow / Widen helpers ---
 ;; Allow narrowing without the safety prompt
 (put 'narrow-to-region 'disabled nil)
@@ -287,9 +307,23 @@
 
 ;; Also bind a single Meta key in programming buffers
 (global-set-key (kbd "M-RET") #'my/toggle-narrow)
+
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+;; eww over tramp
+(defun my/eww-open (file)
+  "Like `eww-open-file`, but works for TRAMP paths by copying to a temp file first."
+  (interactive (list (read-file-name "EWW file: ")))
+  (if (file-remote-p file)
+      (let* ((ext (file-name-extension file t))
+             (tmp (make-temp-file "eww-remote-" nil (or ext ".html"))))
+        (copy-file file tmp t)
+        (eww-open-file tmp))
+    (eww-open-file file)))
+
+(global-set-key (kbd "C-c e f") #'my/eww-open)  ;; convenient binding
